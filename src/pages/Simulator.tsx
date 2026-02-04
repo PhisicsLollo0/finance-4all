@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { PlotDatum, PlotMouseEvent } from 'plotly.js'
+import type { Data, Layout, PlotDatum, PlotMouseEvent } from 'plotly.js'
 import Plot from 'react-plotly.js'
 
 export default function Simulator() {
@@ -20,7 +20,7 @@ export default function Simulator() {
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const plotData = useMemo(
+  const plotData = useMemo<Data[]>(
     () => {
       if (!investmentData) {
         return []
@@ -29,7 +29,7 @@ export default function Simulator() {
         {
           x: investmentData.years,
           y: investmentData.series.fee_a,
-          type: 'scatter',
+          type: 'scatter' as const,
           mode: 'lines',
           line: { color: '#60a5fa', width: 3, shape: 'spline' },
           fill: 'tozeroy',
@@ -40,7 +40,7 @@ export default function Simulator() {
         {
           x: investmentData.years,
           y: investmentData.series.fee_b,
-          type: 'scatter',
+          type: 'scatter' as const,
           mode: 'lines',
           line: { color: '#f97316', width: 3, shape: 'spline' },
           fill: 'tozeroy',
@@ -52,19 +52,19 @@ export default function Simulator() {
     },
     [investmentData, feeRateA, feeRateB]
   )
-  const plotLayout = useMemo(
+  const plotLayout = useMemo<Partial<Layout>>(
     () => ({
-      title: 'Impact of Fees on Investment',
+      title: { text: 'Impact of Fees on Investment' },
       autosize: true,
       margin: { l: 60, r: 35, t: 70, b: 55 },
       legend: {
-        orientation: 'h',
+        orientation: 'h' as const,
         y: 1.08,
         x: 0,
         font: { color: '#e2e8f0' },
       },
       xaxis: {
-        title: 'Year',
+        title: { text: 'Year' },
         gridcolor: 'rgba(148, 163, 184, 0.12)',
         zerolinecolor: 'rgba(148, 163, 184, 0.35)',
         color: '#e2e8f0',
@@ -73,7 +73,7 @@ export default function Simulator() {
         tickcolor: 'rgba(148, 163, 184, 0.35)',
       },
       yaxis: {
-        title: 'Balance (EUR)',
+        title: { text: 'Balance (EUR)' },
         gridcolor: 'rgba(148, 163, 184, 0.12)',
         zerolinecolor: 'rgba(148, 163, 184, 0.35)',
         color: '#e2e8f0',
