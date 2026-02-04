@@ -1,5 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  Badge,
+  Button,
+  Card,
+  Container,
+  Divider,
+  Group,
+  NumberInput,
+  SimpleGrid,
+  Slider,
+  Stack,
+  Text,
+  Title,
+  useComputedColorScheme,
+} from '@mantine/core'
 import type { Data, Layout, PlotDatum, PlotMouseEvent } from 'plotly.js'
 import Plot from 'react-plotly.js'
 
@@ -19,6 +34,33 @@ export default function Simulator() {
   } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const computedScheme = useComputedColorScheme('light')
+
+  const chartTokens = useMemo(() => {
+    if (typeof document === 'undefined') {
+      return {
+        text: '#1f2937',
+        grid: 'rgba(148, 163, 184, 0.25)',
+        zero: 'rgba(148, 163, 184, 0.55)',
+        feeA: '#3b82f6',
+        feeB: '#f97316',
+      }
+    }
+    const styles = getComputedStyle(document.documentElement)
+    return {
+      text: styles.getPropertyValue('--mantine-color-text').trim() || '#1f2937',
+      grid:
+        styles.getPropertyValue('--mantine-color-gray-4').trim() ||
+        'rgba(148, 163, 184, 0.25)',
+      zero:
+        styles.getPropertyValue('--mantine-color-gray-6').trim() ||
+        'rgba(148, 163, 184, 0.55)',
+      feeA:
+        styles.getPropertyValue('--mantine-color-blue-6').trim() || '#3b82f6',
+      feeB:
+        styles.getPropertyValue('--mantine-color-orange-6').trim() || '#f97316',
+    }
+  }, [computedScheme])
 
   const plotData = useMemo<Data[]>(
     () => {
@@ -31,9 +73,9 @@ export default function Simulator() {
           y: investmentData.series.fee_a,
           type: 'scatter' as const,
           mode: 'lines',
-          line: { color: '#60a5fa', width: 3, shape: 'spline' },
+          line: { color: chartTokens.feeA, width: 3, shape: 'spline' },
           fill: 'tozeroy',
-          fillcolor: 'rgba(96, 165, 250, 0.2)',
+          fillcolor: 'rgba(59, 130, 246, 0.18)',
           hovertemplate: 'Year %{x}<br>%{y:.2f} EUR<extra></extra>',
           name: `Fee A (${feeRateA.toFixed(2)}%)`,
         },
@@ -42,52 +84,51 @@ export default function Simulator() {
           y: investmentData.series.fee_b,
           type: 'scatter' as const,
           mode: 'lines',
-          line: { color: '#f97316', width: 3, shape: 'spline' },
+          line: { color: chartTokens.feeB, width: 3, shape: 'spline' },
           fill: 'tozeroy',
-          fillcolor: 'rgba(249, 115, 22, 0.2)',
+          fillcolor: 'rgba(249, 115, 22, 0.18)',
           hovertemplate: 'Year %{x}<br>%{y:.2f} EUR<extra></extra>',
           name: `Fee B (${feeRateB.toFixed(2)}%)`,
         },
       ]
     },
-    [investmentData, feeRateA, feeRateB]
+    [investmentData, feeRateA, feeRateB, chartTokens]
   )
-  const plotLayout = useMemo<Partial<Layout>>(
-    () => ({
-      title: { text: 'Impact of Fees on Investment' },
+  const plotLayout = useMemo<Partial<Layout>>(() => {
+    return {
+      title: { text: '' },
       autosize: true,
-      margin: { l: 60, r: 35, t: 70, b: 55 },
+      margin: { l: 60, r: 35, t: 35, b: 55 },
       legend: {
         orientation: 'h' as const,
         y: 1.08,
         x: 0,
-        font: { color: '#e2e8f0' },
+        font: { color: chartTokens.text },
       },
       xaxis: {
         title: { text: 'Year' },
-        gridcolor: 'rgba(148, 163, 184, 0.12)',
-        zerolinecolor: 'rgba(148, 163, 184, 0.35)',
-        color: '#e2e8f0',
+        gridcolor: chartTokens.grid,
+        zerolinecolor: chartTokens.zero,
+        color: chartTokens.text,
         ticks: 'outside',
         ticklen: 6,
-        tickcolor: 'rgba(148, 163, 184, 0.35)',
+        tickcolor: chartTokens.zero,
       },
       yaxis: {
         title: { text: 'Balance (EUR)' },
-        gridcolor: 'rgba(148, 163, 184, 0.12)',
-        zerolinecolor: 'rgba(148, 163, 184, 0.35)',
-        color: '#e2e8f0',
+        gridcolor: chartTokens.grid,
+        zerolinecolor: chartTokens.zero,
+        color: chartTokens.text,
         ticks: 'outside',
         ticklen: 6,
-        tickcolor: 'rgba(148, 163, 184, 0.35)',
+        tickcolor: chartTokens.zero,
       },
-      font: { color: '#e2e8f0', family: 'Inter, system-ui, sans-serif' },
+      font: { color: chartTokens.text, family: 'Inter, system-ui, sans-serif' },
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
       uirevision: 'static',
-    }),
-    []
-  )
+    }
+  }, [chartTokens])
   const plotConfig = useMemo(
     () => ({ responsive: true, displayModeBar: false }),
     []
@@ -175,144 +216,155 @@ export default function Simulator() {
     return () => controller.abort()
   }, [apiBase, annualGrowthRate, feeRateA, feeRateB, initialInvestment, years])
 
-  const toNumber = useCallback((value: string, fallback: number) => {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : fallback
-  }, [])
+  const toNumber = useCallback(
+    (value: string | number | undefined, fallback: number) => {
+      const parsed = typeof value === 'number' ? value : Number(value)
+      return Number.isFinite(parsed) ? parsed : fallback
+    },
+    []
+  )
+
+  const statusLabel = isLoading ? 'loading' : loadError ?? 'ready'
+  const statusColor = loadError ? 'red' : isLoading ? 'yellow' : 'orange'
 
   return (
-    <div className="app">
-      <header className="app-header app-header-row">
-        <div>
-          <p className="app-kicker">Finance Simulator Scaffold</p>
-          <h1>Fees Impact Explorer</h1>
-          <p className="app-subtitle">
-            Compare how fees reduce long-term investment growth.
-          </p>
-        </div>
-        <Link className="ghost-button" to="/">
-          Back to start
-        </Link>
-      </header>
-      <section className="controls">
-        <div className="controls-header">
-          <div>
-            <p className="controls-kicker">Simulation inputs</p>
-            <h2 className="controls-title">Investment assumptions</h2>
-          </div>
-          <div className="controls-status">
-            <span className="detail-label">Data:</span>{' '}
-            {isLoading ? 'loading' : loadError ?? 'ready'}
-          </div>
-        </div>
-        <div className="control-grid">
-          <label className="control-field" htmlFor="initial">
-            <span className="control-label">Initial investment</span>
-            <div className="control-input">
-              <input
-                id="initial"
-                type="number"
-                min={0}
-                step={100}
-                value={initialInvestment}
-                onChange={(event) =>
-                  setInitialInvestment(
-                    toNumber(event.target.value, initialInvestment)
-                  )
-                }
-              />
-              <span className="control-unit">EUR</span>
+    <Container size="lg" py="xl">
+      <Stack gap="xl">
+        <Group justify="space-between" align="flex-start" wrap="wrap">
+          <Stack gap={4}>
+            <Badge variant="light" color="orange">
+              Finance Simulator Scaffold
+            </Badge>
+            <Title order={1}>Fees Impact Explorer</Title>
+            <Text c="dimmed">
+              Compare how fees reduce long-term investment growth.
+            </Text>
+          </Stack>
+          <Button variant="light" component={Link} to="/">
+            Back to start
+          </Button>
+        </Group>
+
+        <Card withBorder shadow="md" radius="lg" p="lg">
+          <Group justify="space-between" align="center" wrap="wrap" mb="sm">
+            <div>
+              <Badge variant="light" color="orange">
+                Simulation inputs
+              </Badge>
+              <Title order={3} mt={6}>
+                Investment assumptions
+              </Title>
             </div>
-          </label>
-          <label className="control-field" htmlFor="growth">
-            <span className="control-label">Annual growth</span>
-            <div className="control-input">
-              <input
-                id="growth"
-                type="number"
-                min={0}
-                step={0.1}
-                value={annualGrowthRate}
-                onChange={(event) =>
-                  setAnnualGrowthRate(
-                    toNumber(event.target.value, annualGrowthRate)
-                  )
-                }
-              />
-              <span className="control-unit">%</span>
-            </div>
-          </label>
-          <label className="control-field" htmlFor="fee-a">
-            <span className="control-label">Fee A</span>
-            <div className="control-input">
-              <input
-                id="fee-a"
-                type="number"
-                min={0}
-                step={0.1}
-                value={feeRateA}
-                onChange={(event) =>
-                  setFeeRateA(toNumber(event.target.value, feeRateA))
-                }
-              />
-              <span className="control-unit">%</span>
-            </div>
-          </label>
-          <label className="control-field" htmlFor="fee-b">
-            <span className="control-label">Fee B</span>
-            <div className="control-input">
-              <input
-                id="fee-b"
-                type="number"
-                min={0}
-                step={0.1}
-                value={feeRateB}
-                onChange={(event) =>
-                  setFeeRateB(toNumber(event.target.value, feeRateB))
-                }
-              />
-              <span className="control-unit">%</span>
-            </div>
-          </label>
-          <label className="control-field control-field-wide" htmlFor="years">
-            <span className="control-label">
-              Years <span className="control-value">{years}</span>
-            </span>
-            <input
-              id="years"
-              type="range"
+            <Badge variant="light" color={statusColor}>
+              Data: {statusLabel}
+            </Badge>
+          </Group>
+          <Divider mb="md" />
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
+            <NumberInput
+              label="Initial investment"
+              value={initialInvestment}
+              min={0}
+              step={100}
+              rightSection={
+                <Text size="xs" c="dimmed">
+                  EUR
+                </Text>
+              }
+              rightSectionWidth={50}
+              onChange={(value) =>
+                setInitialInvestment(toNumber(value, initialInvestment))
+              }
+            />
+            <NumberInput
+              label="Annual growth"
+              value={annualGrowthRate}
+              min={0}
+              step={0.1}
+              rightSection={
+                <Text size="xs" c="dimmed">
+                  %
+                </Text>
+              }
+              rightSectionWidth={40}
+              onChange={(value) =>
+                setAnnualGrowthRate(toNumber(value, annualGrowthRate))
+              }
+            />
+            <NumberInput
+              label="Fee A"
+              value={feeRateA}
+              min={0}
+              step={0.1}
+              rightSection={
+                <Text size="xs" c="dimmed">
+                  %
+                </Text>
+              }
+              rightSectionWidth={40}
+              onChange={(value) => setFeeRateA(toNumber(value, feeRateA))}
+            />
+            <NumberInput
+              label="Fee B"
+              value={feeRateB}
+              min={0}
+              step={0.1}
+              rightSection={
+                <Text size="xs" c="dimmed">
+                  %
+                </Text>
+              }
+              rightSectionWidth={40}
+              onChange={(value) => setFeeRateB(toNumber(value, feeRateB))}
+            />
+          </SimpleGrid>
+          <Stack gap="xs" mt="md">
+            <Group justify="space-between">
+              <Text fw={600}>Years</Text>
+              <Text c="dimmed">{years} years</Text>
+            </Group>
+            <Slider
               min={5}
               max={60}
               step={5}
               value={years}
-              onChange={(event) => setYears(Number(event.target.value))}
+              onChange={setYears}
             />
-          </label>
-        </div>
-      </section>
-      <section className="plot-card">
-        <div className="plot-wrapper">
-          <Plot
-            data={plotData}
-            layout={plotLayout}
-            config={plotConfig}
-            onHover={handleHover}
-            onUnhover={() => setHoveredPoint(null)}
-            onClick={handleClick}
-            style={{ width: '100%', height: '100%' }}
-          />
-        </div>
-        <div className="plot-details">
-          <div>
-            <span className="detail-label">Hover:</span>{' '}
-            {hoveredPoint ?? 'Move over a point'}
+          </Stack>
+        </Card>
+
+        <Card withBorder shadow="md" radius="lg" p="lg">
+          <Group justify="space-between" align="center" wrap="wrap" mb="md">
+            <Title order={3}>Impact of fees</Title>
+            <Text c="dimmed">Hover a point for details</Text>
+          </Group>
+          <div className="plot-wrapper">
+            <Plot
+              data={plotData}
+              layout={plotLayout}
+              config={plotConfig}
+              onHover={handleHover}
+              onUnhover={() => setHoveredPoint(null)}
+              onClick={handleClick}
+              style={{ width: '100%', height: '100%' }}
+            />
           </div>
-          <div>
-            <span className="detail-label">Selected:</span>{' '}
-            {selectedPoint ?? 'Click a point to lock'}
-          </div>
-        </div>
-      </section>
-    </div>
+          <Group mt="md" gap="xl" wrap="wrap">
+            <Text>
+              <Text span fw={600}>
+                Hover:
+              </Text>{' '}
+              {hoveredPoint ?? 'Move over a point'}
+            </Text>
+            <Text>
+              <Text span fw={600}>
+                Selected:
+              </Text>{' '}
+              {selectedPoint ?? 'Click a point to lock'}
+            </Text>
+          </Group>
+        </Card>
+      </Stack>
+    </Container>
   )
 }

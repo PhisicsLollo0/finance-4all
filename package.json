@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mantine/core": "^8.3.14",
+    "@mantine/hooks": "^8.3.14",
+    "@tabler/icons-react": "^3.36.1",
     "plotly.js": "^3.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
