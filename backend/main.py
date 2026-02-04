@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Finance Simulators API")
+router = APIRouter()
 
 app.add_middleware(
     CORSMiddleware,
@@ -12,17 +13,17 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
+@router.get("/health")
 def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/simulators/linear")
+@router.get("/simulators/linear")
 def linear_simulator(m: float = 1.0) -> dict[str, float]:
     return {"m": m}
 
 
-@app.get("/simulators/investment")
+@router.get("/simulators/investment")
 def investment_simulator(
     initial: float = 1000.0,
     growth_rate: float = 0.07,
@@ -57,3 +58,8 @@ def investment_simulator(
             "fee_b": build_series(fee_b),
         },
     }
+
+
+# Support both `/simulators/*` and `/api/simulators/*` paths.
+app.include_router(router)
+app.include_router(router, prefix="/api")
