@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import type { PlotDatum, PlotMouseEvent } from 'plotly.js'
 import Plot from 'react-plotly.js'
 
 export default function Simulator() {
@@ -102,7 +103,7 @@ export default function Simulator() {
   )
 
   const formatPoint = useCallback(
-    (point: Plotly.PlotDatum) => {
+    (point: PlotDatum) => {
       const year = Number(point.x)
       const balance = Number(point.y)
       return `Year ${year}: ${currencyFormatter.format(balance)}`
@@ -111,14 +112,14 @@ export default function Simulator() {
   )
 
   const handleHover = useCallback(
-    (event: Readonly<Plotly.PlotMouseEvent>) => {
+    (event: Readonly<PlotMouseEvent>) => {
       const point = event.points[0]
       setHoveredPoint(formatPoint(point))
     },
     [formatPoint]
   )
   const handleClick = useCallback(
-    (event: Readonly<Plotly.PlotMouseEvent>) => {
+    (event: Readonly<PlotMouseEvent>) => {
       const point = event.points[0]
       setSelectedPoint(formatPoint(point))
     },
