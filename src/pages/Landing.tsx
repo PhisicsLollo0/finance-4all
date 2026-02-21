@@ -15,6 +15,8 @@ import {
 } from '@mantine/core'
 import {
   IconArrowRight,
+  IconBrandGithub,
+  IconBrandLinkedin,
   IconBolt,
   IconChartLine,
   IconClock,
@@ -116,6 +118,35 @@ export default function Landing() {
         {/* ── HERO ── */}
         <Stack gap="lg" align="center" ta="center" pt={rem(32)}>
           <Badge variant="dot" color="orange" size="xl">Finance 4 All</Badge>
+
+          <Group justify="center" gap="sm">
+            <Button
+              component="a"
+              href="https://github.com/PhisicsLollo0/finance-4all"
+              target="_blank"
+              rel="noreferrer"
+              variant="light"
+              color="dark"
+              radius="xl"
+              size="xs"
+              leftSection={<IconBrandGithub size={14} />}
+            >
+              GitHub
+            </Button>
+            <Button
+              component="a"
+              href="https://www.linkedin.com/in/lorenzo-cavallo/"
+              target="_blank"
+              rel="noreferrer"
+              variant="light"
+              color="blue"
+              radius="xl"
+              size="xs"
+              leftSection={<IconBrandLinkedin size={14} />}
+            >
+              LinkedIn
+            </Button>
+          </Group>
 
           <Title
             order={1}
