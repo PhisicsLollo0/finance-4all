@@ -7,6 +7,7 @@ import {
 } from '@mantine/core'
 import { IconMoon, IconSun } from '@tabler/icons-react'
 import Landing from './pages/Landing'
+import MartingaleSimulator from './pages/MartingaleSimulator'
 import Simulator from './pages/Simulator'
 import './App.css'
 
@@ -32,6 +33,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/simulator" element={<Simulator />} />
+        <Route path="/martingale" element={<MartingaleSimulator />} />
       </Routes>
     </div>
   )

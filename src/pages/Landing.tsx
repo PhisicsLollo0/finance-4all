@@ -21,6 +21,7 @@ import {
   IconChartLine,
   IconClock,
   IconCoin,
+  IconDice5,
   IconEqual,
   IconEye,
   IconLock,
@@ -74,6 +75,22 @@ const TOOLS = [
     to: null,
     available: false,
     tags: ['Retirement', 'Planning'],
+  },
+] as const
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FUN & DIGRESSIONS — side-scope experiments
+   ───────────────────────────────────────────────────────────────────────────── */
+const FUN_STUFF = [
+  {
+    icon: IconDice5,
+    color: 'red',
+    label: 'Martingale Roulette Simulator',
+    description:
+      'Run a Monte-Carlo simulation of the Martingale betting strategy on European roulette. Watch thousands of simulated sessions play out and explore the statistics behind the most famous (and dangerous) gambling strategy.',
+    to: '/martingale',
+    available: true,
+    tags: ['Monte-Carlo', 'Roulette', 'Gambling'],
   },
 ] as const
 
@@ -219,6 +236,72 @@ export default function Landing() {
 
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
             {TOOLS.map(({ icon: Icon, color, label, description, to, available, tags }) => (
+              <Card
+                key={label}
+                withBorder
+                radius="xl"
+                p="xl"
+                style={{
+                  opacity: available ? 1 : 0.6,
+                  borderColor: available ? `var(--mantine-color-${color}-4)` : undefined,
+                  position: 'relative',
+                }}
+              >
+                <Stack gap="sm" style={{ height: '100%' }}>
+                  <Group justify="space-between" align="flex-start">
+                    <ThemeIcon color={color} variant="light" size={48} radius="lg">
+                      <Icon size={24} />
+                    </ThemeIcon>
+                    {available ? (
+                      <Badge color="green" variant="light" size="sm">Live</Badge>
+                    ) : (
+                      <Badge color="gray" variant="light" size="sm">Coming soon</Badge>
+                    )}
+                  </Group>
+
+                  <Title order={3} size="h4">{label}</Title>
+                  <Text size="sm" c="dimmed" style={{ flex: 1 }}>{description}</Text>
+
+                  <Group gap={4} mt="xs">
+                    {tags.map((tag) => (
+                      <Badge key={tag} size="xs" variant="dot" color={color}>{tag}</Badge>
+                    ))}
+                  </Group>
+
+                  {available && to && (
+                    <Button
+                      component={Link}
+                      to={to}
+                      variant="light"
+                      color={color}
+                      radius="xl"
+                      rightSection={<IconArrowRight size={14} />}
+                      mt="xs"
+                      fullWidth
+                    >
+                      Open tool
+                    </Button>
+                  )}
+                </Stack>
+              </Card>
+            ))}
+          </SimpleGrid>
+        </Stack>
+
+        {/* ── FUN & DIGRESSIONS ── */}
+        <Stack gap="md">
+          <Group gap="xs">
+            <ThemeIcon color="red" variant="light" size="lg" radius="xl">
+              <IconDice5 size={18} />
+            </ThemeIcon>
+            <Title order={2} size="h2">Fun & Digressions</Title>
+          </Group>
+          <Text c="dimmed" size="sm">
+            Side experiments, curiosities, and things that are more fun than practical.
+          </Text>
+
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+            {FUN_STUFF.map(({ icon: Icon, color, label, description, to, available, tags }) => (
               <Card
                 key={label}
                 withBorder
