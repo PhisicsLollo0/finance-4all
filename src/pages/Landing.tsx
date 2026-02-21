@@ -288,6 +288,32 @@ export default function Landing() {
           </SimpleGrid>
         </Stack>
 
+        {/* ── WHY IT MATTERS ── */}
+        <Stack gap="md">
+          <Group gap="xs">
+            <ThemeIcon color="orange" variant="light" size="lg" radius="xl">
+              <IconEqual size={18} />
+            </ThemeIcon>
+            <Title order={2} size="h2">Why democratising finance matters</Title>
+          </Group>
+          <Text c="dimmed" size="sm" maw={600}>
+            Financial complexity is not accidental — it benefits those who sell products.
+            Clarity benefits those who buy them.
+          </Text>
+
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
+            {PILLARS.map(({ icon: Icon, color, title, body }) => (
+              <Card key={title} withBorder radius="xl" p="lg">
+                <ThemeIcon color={color} variant="light" size="lg" radius="md" mb="sm">
+                  <Icon size={18} />
+                </ThemeIcon>
+                <Text fw={700} size="sm" mb={6}>{title}</Text>
+                <Text size="sm" c="dimmed">{body}</Text>
+              </Card>
+            ))}
+          </SimpleGrid>
+        </Stack>
+
         {/* ── FUN & DIGRESSIONS ── */}
         <Stack gap="md">
           <Group gap="xs">
@@ -349,32 +375,6 @@ export default function Landing() {
                     </Button>
                   )}
                 </Stack>
-              </Card>
-            ))}
-          </SimpleGrid>
-        </Stack>
-
-        {/* ── WHY IT MATTERS ── */}
-        <Stack gap="md">
-          <Group gap="xs">
-            <ThemeIcon color="orange" variant="light" size="lg" radius="xl">
-              <IconEqual size={18} />
-            </ThemeIcon>
-            <Title order={2} size="h2">Why democratising finance matters</Title>
-          </Group>
-          <Text c="dimmed" size="sm" maw={600}>
-            Financial complexity is not accidental — it benefits those who sell products.
-            Clarity benefits those who buy them.
-          </Text>
-
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
-            {PILLARS.map(({ icon: Icon, color, title, body }) => (
-              <Card key={title} withBorder radius="xl" p="lg">
-                <ThemeIcon color={color} variant="light" size="lg" radius="md" mb="sm">
-                  <Icon size={18} />
-                </ThemeIcon>
-                <Text fw={700} size="sm" mb={6}>{title}</Text>
-                <Text size="sm" c="dimmed">{body}</Text>
               </Card>
             ))}
           </SimpleGrid>
