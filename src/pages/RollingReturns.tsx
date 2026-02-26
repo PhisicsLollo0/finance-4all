@@ -22,7 +22,12 @@ import {
 import {
   IconChartLine,
   IconChevronDown,
+  IconFlame,
   IconInfoCircle,
+  IconScale,
+  IconShieldCheck,
+  IconStars,
+  IconTrendingDown,
   IconTrendingUp,
 } from '@tabler/icons-react'
 import type { Data, Layout } from 'plotly.js'
@@ -42,6 +47,9 @@ interface SeriesData {
   annualised: number[]
   total: number[]
   dates: string[]
+  sharpe: number[]
+  max_drawdown: number[]
+  time_underwater: number[]
 }
 
 interface DistributionData {
@@ -50,6 +58,12 @@ interface DistributionData {
   p5: number
   p95: number
   mean: number
+  sharpe_median: number
+  sharpe_mean: number
+  max_drawdown_median: number
+  max_drawdown_worst: number
+  time_underwater_median: number
+  time_underwater_worst: number
 }
 
 interface RollingResult {
@@ -126,6 +140,20 @@ export default function RollingReturns() {
       })
       .catch(() => setCatalogueLoading(false))
   }, [apiBase])
+
+  /* ── Toggle all portfolios in a group ── */
+  const toggleGroup = useCallback(
+    (groupIds: string[]) => {
+      setSelectedIds((prev) => {
+        const allSelected = groupIds.every((id) => prev.includes(id))
+        if (allSelected) {
+          return prev.filter((id) => !groupIds.includes(id))
+        }
+        return [...new Set([...prev, ...groupIds])]
+      })
+    },
+    []
+  )
 
   /* ── Fetch rolling returns when selection changes ── */
   useEffect(() => {
@@ -273,8 +301,9 @@ export default function RollingReturns() {
   const plotConfig = useMemo(() => ({ responsive: true, displayModeBar: false }), [])
 
   /* ── Group portfolios ── */
-  const complexPortfolios = catalogue.filter((p) => p.group === 'complex')
-  const simplePortfolios = catalogue.filter((p) => p.group === 'simple')
+  const spectrumPortfolios = catalogue.filter((p) => p.group === 'spectrum')
+  const classicPortfolios = catalogue.filter((p) => p.group === 'classic')
+  const factorPortfolios = catalogue.filter((p) => p.group === 'factor')
 
   /* ── Distribution stats cards ── */
   const distCards = useMemo(() => {
@@ -286,8 +315,96 @@ export default function RollingReturns() {
       p5: d.p5,
       p95: d.p95,
       mean: d.mean,
+      sharpe_median: d.sharpe_median,
+      sharpe_mean: d.sharpe_mean,
+      max_drawdown_median: d.max_drawdown_median,
+      max_drawdown_worst: d.max_drawdown_worst,
+      time_underwater_median: d.time_underwater_median,
+      time_underwater_worst: d.time_underwater_worst,
     }))
   }, [result])
+
+  /* ── Build Sharpe ratio plot data ── */
+  const sharpePlotData = useMemo<Data[]>(() => {
+    if (!result) return []
+    return Object.entries(result.series).map(([label, s], i) => ({
+      x: s.dates.map(parseDate),
+      y: s.sharpe,
+      type: 'scatter' as const,
+      mode: 'lines',
+      line: { color: PALETTE[i % PALETTE.length], width: 2.5 },
+      name: label,
+      hovertemplate: `<b>${label}</b><br>Date: %{x|%b %Y}<br>Sharpe: %{y:.2f}<extra></extra>`,
+    }))
+  }, [result])
+
+  /* ── Build Max Drawdown plot data ── */
+  const mddPlotData = useMemo<Data[]>(() => {
+    if (!result) return []
+    return Object.entries(result.series).map(([label, s], i) => ({
+      x: s.dates.map(parseDate),
+      y: s.max_drawdown.map((v) => v * 100),
+      type: 'scatter' as const,
+      mode: 'lines',
+      line: { color: PALETTE[i % PALETTE.length], width: 2.5 },
+      name: label,
+      hovertemplate: `<b>${label}</b><br>Date: %{x|%b %Y}<br>Max Drawdown: %{y:.1f}%<extra></extra>`,
+    }))
+  }, [result])
+
+  /* ── Build Time Underwater plot data ── */
+  const underwaterPlotData = useMemo<Data[]>(() => {
+    if (!result) return []
+    return Object.entries(result.series).map(([label, s], i) => ({
+      x: s.dates.map(parseDate),
+      y: s.time_underwater,
+      type: 'scatter' as const,
+      mode: 'lines',
+      line: { color: PALETTE[i % PALETTE.length], width: 2.5 },
+      name: label,
+      hovertemplate: `<b>${label}</b><br>Date: %{x|%b %Y}<br>Months underwater: %{y}<extra></extra>`,
+    }))
+  }, [result])
+
+  /* ── Metric-specific layouts ── */
+  const sharpeLayout = useMemo<Partial<Layout>>(
+    () => ({
+      ...baseLayout,
+      yaxis: {
+        ...baseLayout.yaxis,
+        title: { text: 'Sharpe Ratio' },
+        tickformat: '.2f',
+        ticksuffix: '',
+      },
+    }),
+    [baseLayout]
+  )
+
+  const mddLayout = useMemo<Partial<Layout>>(
+    () => ({
+      ...baseLayout,
+      yaxis: {
+        ...baseLayout.yaxis,
+        title: { text: 'Max Drawdown (%)' },
+        tickformat: '.0f',
+        ticksuffix: '%',
+      },
+    }),
+    [baseLayout]
+  )
+
+  const underwaterLayout = useMemo<Partial<Layout>>(
+    () => ({
+      ...baseLayout,
+      yaxis: {
+        ...baseLayout.yaxis,
+        title: { text: 'Months Underwater' },
+        tickformat: 'd',
+        ticksuffix: '',
+      },
+    }),
+    [baseLayout]
+  )
 
   /* ══════════════════════════════════════════════════════════════════════════
      RENDER
@@ -342,52 +459,39 @@ export default function RollingReturns() {
         {/* ══════════════════════════════════════════════════════════════════
             PORTFOLIO SELECTION
             ══════════════════════════════════════════════════════════════════ */}
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-          {/* Complex portfolios */}
+        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
+          {/* ── Stock/Bond Spectrum ── */}
           <Card withBorder radius="lg" p="lg">
-            <Group gap="xs" mb="sm">
-              <ThemeIcon color="violet" variant="light" size="md" radius="xl">
-                <IconChartLine size={15} />
-              </ThemeIcon>
-              <Title order={3} size="h4">
-                Complex Portfolios
-              </Title>
-            </Group>
-            <Divider mb="sm" />
-            {catalogueLoading ? (
-              <Loader size="sm" />
-            ) : (
-              <Stack gap="xs">
-                {complexPortfolios.map((p) => (
-                  <Checkbox
-                    key={p.id}
-                    label={p.label}
-                    description={p.description}
-                    checked={selectedIds.includes(p.id)}
-                    onChange={() => togglePortfolio(p.id)}
-                    color="violet"
-                  />
-                ))}
-              </Stack>
-            )}
-          </Card>
-
-          {/* Simple portfolios */}
-          <Card withBorder radius="lg" p="lg">
-            <Group gap="xs" mb="sm">
+            <Group gap="xs" mb={4}>
               <ThemeIcon color="blue" variant="light" size="md" radius="xl">
-                <IconTrendingUp size={15} />
+                <IconScale size={15} />
               </ThemeIcon>
               <Title order={3} size="h4">
-                Simple Portfolios
+                Stock / Bond Ratio
               </Title>
             </Group>
+            <Text size="xs" c="dimmed" mb="sm">
+              Same two indices (MSCI World + Bonds) at different mixes.
+              See how the equity percentage alone drives risk and return.
+            </Text>
             <Divider mb="sm" />
             {catalogueLoading ? (
               <Loader size="sm" />
             ) : (
               <Stack gap="xs">
-                {simplePortfolios.map((p) => (
+                <Checkbox
+                  label="Select all"
+                  checked={spectrumPortfolios.every((p) => selectedIds.includes(p.id))}
+                  indeterminate={
+                    spectrumPortfolios.some((p) => selectedIds.includes(p.id)) &&
+                    !spectrumPortfolios.every((p) => selectedIds.includes(p.id))
+                  }
+                  onChange={() => toggleGroup(spectrumPortfolios.map((p) => p.id))}
+                  color="blue"
+                  fw={600}
+                />
+                <Divider variant="dashed" />
+                {spectrumPortfolios.map((p) => (
                   <Checkbox
                     key={p.id}
                     label={p.label}
@@ -395,6 +499,96 @@ export default function RollingReturns() {
                     checked={selectedIds.includes(p.id)}
                     onChange={() => togglePortfolio(p.id)}
                     color="blue"
+                  />
+                ))}
+              </Stack>
+            )}
+          </Card>
+
+          {/* ── Classic Allocations ── */}
+          <Card withBorder radius="lg" p="lg">
+            <Group gap="xs" mb={4}>
+              <ThemeIcon color="teal" variant="light" size="md" radius="xl">
+                <IconTrendingUp size={15} />
+              </ThemeIcon>
+              <Title order={3} size="h4">
+                Classic Allocations
+              </Title>
+            </Group>
+            <Text size="xs" c="dimmed" mb="sm">
+              Well-known portfolio templates using broad market indices
+              (MSCI World or ACWI) combined with bonds.
+            </Text>
+            <Divider mb="sm" />
+            {catalogueLoading ? (
+              <Loader size="sm" />
+            ) : (
+              <Stack gap="xs">
+                <Checkbox
+                  label="Select all"
+                  checked={classicPortfolios.every((p) => selectedIds.includes(p.id))}
+                  indeterminate={
+                    classicPortfolios.some((p) => selectedIds.includes(p.id)) &&
+                    !classicPortfolios.every((p) => selectedIds.includes(p.id))
+                  }
+                  onChange={() => toggleGroup(classicPortfolios.map((p) => p.id))}
+                  color="teal"
+                  fw={600}
+                />
+                <Divider variant="dashed" />
+                {classicPortfolios.map((p) => (
+                  <Checkbox
+                    key={p.id}
+                    label={p.label}
+                    description={p.description}
+                    checked={selectedIds.includes(p.id)}
+                    onChange={() => togglePortfolio(p.id)}
+                    color="teal"
+                  />
+                ))}
+              </Stack>
+            )}
+          </Card>
+
+          {/* ── Factor Tilted ── */}
+          <Card withBorder radius="lg" p="lg">
+            <Group gap="xs" mb={4}>
+              <ThemeIcon color="violet" variant="light" size="md" radius="xl">
+                <IconStars size={15} />
+              </ThemeIcon>
+              <Title order={3} size="h4">
+                Factor Tilted
+              </Title>
+            </Group>
+            <Text size="xs" c="dimmed" mb="sm">
+              Add exposure to academic risk factors — small-cap value,
+              momentum, or EUR home bias — for potentially higher returns.
+            </Text>
+            <Divider mb="sm" />
+            {catalogueLoading ? (
+              <Loader size="sm" />
+            ) : (
+              <Stack gap="xs">
+                <Checkbox
+                  label="Select all"
+                  checked={factorPortfolios.every((p) => selectedIds.includes(p.id))}
+                  indeterminate={
+                    factorPortfolios.some((p) => selectedIds.includes(p.id)) &&
+                    !factorPortfolios.every((p) => selectedIds.includes(p.id))
+                  }
+                  onChange={() => toggleGroup(factorPortfolios.map((p) => p.id))}
+                  color="violet"
+                  fw={600}
+                />
+                <Divider variant="dashed" />
+                {factorPortfolios.map((p) => (
+                  <Checkbox
+                    key={p.id}
+                    label={p.label}
+                    description={p.description}
+                    checked={selectedIds.includes(p.id)}
+                    onChange={() => togglePortfolio(p.id)}
+                    color="violet"
                   />
                 ))}
               </Stack>
@@ -418,6 +612,9 @@ export default function RollingReturns() {
                   { label: '15y', value: '15' },
                   { label: '20y', value: '20' },
                   { label: '25y', value: '25' },
+                  { label: '30y', value: '30' },
+                  { label: '35y', value: '35' },
+                  { label: '40y', value: '40' },
                 ]}
                 color="violet"
               />
@@ -561,41 +758,59 @@ export default function RollingReturns() {
                   p="sm"
                   style={{ borderLeft: `5px solid ${d.color}` }}
                 >
-                  <Text size="xs" fw={700} mb={4} lineClamp={1}>
+                  <Text size="xs" fw={700} mb={6} lineClamp={1}>
                     {d.label}
                   </Text>
+
+                  {/* Return metrics */}
+                  <Text size="xs" c="dimmed" fw={600} mb={2}>Return</Text>
+                  <SimpleGrid cols={2} spacing={4} mb="xs">
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">Median</Text>
+                      <Text size="sm" fw={700}>{(d.median * 100).toFixed(2)}%</Text>
+                    </Stack>
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">Mean</Text>
+                      <Text size="sm" fw={700}>{(d.mean * 100).toFixed(2)}%</Text>
+                    </Stack>
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">5th pctl</Text>
+                      <Text size="sm" fw={700} c="red">{(d.p5 * 100).toFixed(2)}%</Text>
+                    </Stack>
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">95th pctl</Text>
+                      <Text size="sm" fw={700} c="teal">{(d.p95 * 100).toFixed(2)}%</Text>
+                    </Stack>
+                  </SimpleGrid>
+
+                  <Divider my={6} />
+
+                  {/* Risk metrics */}
+                  <Text size="xs" c="dimmed" fw={600} mb={2}>Risk</Text>
                   <SimpleGrid cols={2} spacing={4}>
                     <Stack gap={0}>
-                      <Text size="xs" c="dimmed">
-                        Median
-                      </Text>
-                      <Text size="sm" fw={700}>
-                        {(d.median * 100).toFixed(2)}%
-                      </Text>
+                      <Text size="xs" c="dimmed">Sharpe (med)</Text>
+                      <Text size="sm" fw={700}>{d.sharpe_median.toFixed(2)}</Text>
                     </Stack>
                     <Stack gap={0}>
-                      <Text size="xs" c="dimmed">
-                        Mean
-                      </Text>
-                      <Text size="sm" fw={700}>
-                        {(d.mean * 100).toFixed(2)}%
-                      </Text>
+                      <Text size="xs" c="dimmed">Sharpe (avg)</Text>
+                      <Text size="sm" fw={700}>{d.sharpe_mean.toFixed(2)}</Text>
                     </Stack>
                     <Stack gap={0}>
-                      <Text size="xs" c="dimmed">
-                        5th percentile
-                      </Text>
-                      <Text size="sm" fw={700} c="red">
-                        {(d.p5 * 100).toFixed(2)}%
-                      </Text>
+                      <Text size="xs" c="dimmed">Max DD (med)</Text>
+                      <Text size="sm" fw={700} c="red">{(d.max_drawdown_median * 100).toFixed(1)}%</Text>
                     </Stack>
                     <Stack gap={0}>
-                      <Text size="xs" c="dimmed">
-                        95th percentile
-                      </Text>
-                      <Text size="sm" fw={700} c="teal">
-                        {(d.p95 * 100).toFixed(2)}%
-                      </Text>
+                      <Text size="xs" c="dimmed">Max DD (worst)</Text>
+                      <Text size="sm" fw={700} c="red">{(d.max_drawdown_worst * 100).toFixed(1)}%</Text>
+                    </Stack>
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">Underwater (med)</Text>
+                      <Text size="sm" fw={700}>{d.time_underwater_median} mo</Text>
+                    </Stack>
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">Underwater (worst)</Text>
+                      <Text size="sm" fw={700} c="red">{d.time_underwater_worst} mo</Text>
                     </Stack>
                   </SimpleGrid>
                 </Paper>
@@ -620,6 +835,164 @@ export default function RollingReturns() {
                   worst 5% of outcomes — a useful proxy for downside risk over
                   a {years}-year horizon. The higher this number, the safer the
                   portfolio historically.
+                </Text>
+              </Group>
+            </Paper>
+          </Card>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            SHARPE RATIO — ROLLING OVER TIME
+            ══════════════════════════════════════════════════════════════════ */}
+        {result && Object.keys(result.series).length > 0 && (
+          <Card withBorder shadow="md" radius="lg" p="lg">
+            <Stack gap="xs" mb="md">
+              <Group gap="xs">
+                <ThemeIcon color="teal" variant="light" size="md" radius="xl">
+                  <IconShieldCheck size={15} />
+                </ThemeIcon>
+                <Title order={2} size="h3">
+                  Sharpe Ratio — {years}‑Year Rolling Window
+                </Title>
+              </Group>
+              <Text size="sm" c="dimmed">
+                The Sharpe ratio measures return per unit of risk.
+                Higher is better — it means you're being compensated more for
+                the volatility you endure.
+              </Text>
+            </Stack>
+
+            <div className="plot-wrapper">
+              <Plot
+                data={sharpePlotData}
+                layout={sharpeLayout}
+                config={plotConfig}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+
+            <Paper
+              radius="md"
+              p="sm"
+              mt="md"
+              withBorder
+              style={{
+                background: 'rgba(20,184,166,0.04)',
+                borderColor: 'rgba(20,184,166,0.3)',
+              }}
+            >
+              <Group gap="xs">
+                <IconInfoCircle size={16} color="#14b8a6" />
+                <Text size="xs" c="dimmed">
+                  <Text span fw={600}>How to read this:</Text> A Sharpe of 0.5
+                  means for every 1% of volatility you took on, you earned
+                  0.5% of excess return. Above 1.0 is generally considered
+                  excellent.
+                </Text>
+              </Group>
+            </Paper>
+          </Card>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            MAX DRAWDOWN — ROLLING OVER TIME
+            ══════════════════════════════════════════════════════════════════ */}
+        {result && Object.keys(result.series).length > 0 && (
+          <Card withBorder shadow="md" radius="lg" p="lg">
+            <Stack gap="xs" mb="md">
+              <Group gap="xs">
+                <ThemeIcon color="red" variant="light" size="md" radius="xl">
+                  <IconTrendingDown size={15} />
+                </ThemeIcon>
+                <Title order={2} size="h3">
+                  Max Drawdown — {years}‑Year Rolling Window
+                </Title>
+              </Group>
+              <Text size="sm" c="dimmed">
+                The worst peak-to-trough decline within each {years}-year
+                window. Closer to 0% is better — it means the portfolio
+                experienced smaller crashes.
+              </Text>
+            </Stack>
+
+            <div className="plot-wrapper">
+              <Plot
+                data={mddPlotData}
+                layout={mddLayout}
+                config={plotConfig}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+
+            <Paper
+              radius="md"
+              p="sm"
+              mt="md"
+              withBorder
+              style={{
+                background: 'rgba(239,68,68,0.04)',
+                borderColor: 'rgba(239,68,68,0.3)',
+              }}
+            >
+              <Group gap="xs">
+                <IconInfoCircle size={16} color="#ef4444" />
+                <Text size="xs" c="dimmed">
+                  <Text span fw={600}>How to read this:</Text> A max drawdown
+                  of −40% means at some point within that window the portfolio
+                  lost 40% from its previous peak. This is the pain you would
+                  have felt before recovery.
+                </Text>
+              </Group>
+            </Paper>
+          </Card>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            TIME UNDERWATER — ROLLING OVER TIME
+            ══════════════════════════════════════════════════════════════════ */}
+        {result && Object.keys(result.series).length > 0 && (
+          <Card withBorder shadow="md" radius="lg" p="lg">
+            <Stack gap="xs" mb="md">
+              <Group gap="xs">
+                <ThemeIcon color="orange" variant="light" size="md" radius="xl">
+                  <IconFlame size={15} />
+                </ThemeIcon>
+                <Title order={2} size="h3">
+                  Time Underwater — {years}‑Year Rolling Window
+                </Title>
+              </Group>
+              <Text size="sm" c="dimmed">
+                The longest consecutive streak (in months) that the portfolio
+                stayed below its previous peak within each window. Shorter is
+                better — it means the portfolio recovers faster from losses.
+              </Text>
+            </Stack>
+
+            <div className="plot-wrapper">
+              <Plot
+                data={underwaterPlotData}
+                layout={underwaterLayout}
+                config={plotConfig}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+
+            <Paper
+              radius="md"
+              p="sm"
+              mt="md"
+              withBorder
+              style={{
+                background: 'rgba(249,115,22,0.04)',
+                borderColor: 'rgba(249,115,22,0.3)',
+              }}
+            >
+              <Group gap="xs">
+                <IconInfoCircle size={16} color="#f97316" />
+                <Text size="xs" c="dimmed">
+                  <Text span fw={600}>How to read this:</Text> If the line
+                  shows 60 months, it means the portfolio spent 5 years below
+                  its previous high. This tests your patience as an investor.
                 </Text>
               </Group>
             </Paper>

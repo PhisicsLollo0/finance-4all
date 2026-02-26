@@ -26,7 +26,7 @@ def get_rolling_returns(
         ...,
         description="List of portfolio IDs to compute (e.g. simple100, 80_20_World)",
     ),
-    years: int = Query(15, ge=1, le=30, description="Rolling window size in years"),
+    years: int = Query(15, ge=1, le=40, description="Rolling window size in years"),
 ) -> dict[str, Any]:
     """Compute rolling annualised & total returns + distributions."""
     return compute_rolling_returns(portfolios, years)
