@@ -8,6 +8,7 @@ import {
 import { IconMoon, IconSun } from '@tabler/icons-react'
 import Landing from './pages/Landing'
 import MartingaleSimulator from './pages/MartingaleSimulator'
+import RollingReturns from './pages/RollingReturns'
 import Simulator from './pages/Simulator'
 import './App.css'
 
@@ -33,6 +34,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/simulator" element={<Simulator />} />
+        <Route path="/rolling-returns" element={<RollingReturns />} />
         <Route path="/martingale" element={<MartingaleSimulator />} />
       </Routes>
     </div>

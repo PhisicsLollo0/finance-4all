@@ -28,6 +28,7 @@ import {
   IconPercentage,
   IconScale,
   IconSchool,
+  IconTrendingUp,
   IconUsersGroup,
   IconWorldWww,
 } from '@tabler/icons-react'
@@ -45,6 +46,16 @@ const TOOLS = [
     to: '/simulator',
     available: true,
     tags: ['Fees', 'Compounding', 'TER'],
+  },
+  {
+    icon: IconTrendingUp,
+    color: 'violet',
+    label: 'Rolling Returns Analyser',
+    description:
+      'Explore how different portfolio allocations performed historically using rolling-window analysis on real MSCI & FTSE index data going back to the 1970s. Compare annualised and total returns side by side.',
+    to: '/rolling-returns',
+    available: true,
+    tags: ['Historical', 'Portfolios', 'Rolling Returns'],
   },
   {
     icon: IconCoin,

@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from src.core.middleware import configure_cors
 from src.routers.simulators import router as simulators_router
 from src.routers.games import router as games_router
+from src.routers.rolling_returns import router as rolling_returns_router
 
 app = FastAPI(title="Finance Simulators API")
 
@@ -16,3 +17,7 @@ app.include_router(simulators_router, prefix="/api")
 # Games / fun endpoints
 app.include_router(games_router)
 app.include_router(games_router, prefix="/api")
+
+# Rolling returns / portfolio analysis
+app.include_router(rolling_returns_router)
+app.include_router(rolling_returns_router, prefix="/api")

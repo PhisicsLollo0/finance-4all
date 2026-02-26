@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/pages/Landing.tsx","./src/pages/Simulator.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/pages/landing.tsx","./src/pages/martingalesimulator.tsx","./src/pages/rollingreturns.tsx","./src/pages/simulator.tsx"],"version":"5.9.3"}
